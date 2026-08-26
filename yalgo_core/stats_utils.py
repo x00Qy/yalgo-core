@@ -21,6 +21,8 @@ for confidence=0.95 matches the old hardcoded constant.
 import math
 import statistics
 
+from scipy import stats
+
 
 def log_pmf(n: int, k: int, p: float) -> float:
     """log of the binomial probability mass P(X=k) for X~Binomial(n,p).
@@ -62,25 +64,71 @@ def wilson_ci(k: int, n: int, confidence: float = 0.95) -> tuple[float, float]:
     return (max(0.0, center - margin), min(1.0, center + margin))
 
 
+def _two_sided_t_pvalue(t_stat: float, df: float) -> float:
+    """Two-sided p-value from Student's t with `df` degrees of freedom.
+
+    === CORRECTED 2026-08 (audit finding H1) ===
+    Both t-tests below previously computed the t-statistic correctly and then
+    converted it with math.erf — the STANDARD NORMAL CDF. For a t-statistic
+    the correct reference is Student's t, and the normal approximation always
+    returns a SMALLER p-value, i.e. it systematically OVERSTATES significance.
+    In a project whose entire acceptance bar is p<0.01 that error ran in the
+    worst possible direction.
+
+    WORKED EXAMPLE, and a caution about reading it too quickly. The
+    fixed-%-OTM no-stop cell (n=137) was reported as p=0.0094 and treated as
+    the best result this project had produced. Three states, all measured:
+
+        wrong lot table + normal approx (as published) : p=0.0094
+        wrong lot table + Student's t                  : p=0.0105
+        corrected lot table + Student's t (now)        : p=0.0083
+
+    So this fix ALONE would have pushed that cell over the bar, but the
+    lot-size correction landed at the same time (audit finding C1), moved the
+    underlying P&L, and raised the t-statistic enough to more than offset it.
+    The cell now reads MORE significant, not less. An early draft of this
+    docstring asserted it "never cleared the bar at all" — that was true only
+    of the middle row, and is corrected here rather than left standing.
+
+    None of that changes the verdict: the cell was the best of 10 swept
+    configurations, so Bonferroni gives 0.083, and the full-history result
+    (391 trades, p=0.1387) supersedes it outright.
+
+    The error scales inversely with sample size, so small sweeps were worst
+    affected — at n=5 the reported p was understated by 6.2x, at n=30 by 1.5x.
+    Any pre-2026-08 result near the bar with small n should be re-checked.
+    """
+    if df <= 0:
+        return 1.0
+    return float(2.0 * stats.t.sf(abs(t_stat), df))
+
+
 def welch_t_test(sample_a: list[float], sample_b: list[float]) -> tuple[float, float]:
     """Welch's t-test (unequal variance) for whether two sample means differ.
-    Returns (t_stat, two_sided_p_value_normal_approx)."""
+    Returns (t_stat, two_sided_p_value).
+
+    Degrees of freedom use the Welch-Satterthwaite equation, which the old
+    normal-approximation version did not compute at all."""
     n_a, n_b = len(sample_a), len(sample_b)
     if n_a < 2 or n_b < 2:
         return (0.0, 1.0)
     mean_a, mean_b = sum(sample_a) / n_a, sum(sample_b) / n_b
     var_a = sum((x - mean_a) ** 2 for x in sample_a) / (n_a - 1)
     var_b = sum((x - mean_b) ** 2 for x in sample_b) / (n_b - 1)
-    se = math.sqrt(var_a / n_a + var_b / n_b)
-    if se == 0:
+    se_sq = var_a / n_a + var_b / n_b
+    if se_sq <= 0:
         return (0.0, 1.0)
-    t_stat = (mean_a - mean_b) / se
-    p = 2 * (1 - 0.5 * (1 + math.erf(abs(t_stat) / math.sqrt(2))))
-    return (t_stat, p)
+    t_stat = (mean_a - mean_b) / math.sqrt(se_sq)
+    # Welch-Satterthwaite: the effective df of a difference of two means whose
+    # variances are not assumed equal.
+    denom = (var_a / n_a) ** 2 / (n_a - 1) + (var_b / n_b) ** 2 / (n_b - 1)
+    df = se_sq ** 2 / denom if denom > 0 else (n_a + n_b - 2)
+    return (t_stat, _two_sided_t_pvalue(t_stat, df))
 
 
 def one_sample_t_test(sample: list[float]) -> tuple[float, float]:
-    """One-sample t-test: is the sample mean significantly different from 0."""
+    """One-sample t-test: is the sample mean significantly different from 0.
+    Returns (t_stat, two_sided_p_value) with df = n - 1."""
     n = len(sample)
     if n < 2:
         return (0.0, 1.0)
@@ -90,8 +138,7 @@ def one_sample_t_test(sample: list[float]) -> tuple[float, float]:
     if se == 0:
         return (0.0, 1.0)
     t_stat = mean / se
-    p = 2 * (1 - 0.5 * (1 + math.erf(abs(t_stat) / math.sqrt(2))))
-    return (t_stat, p)
+    return (t_stat, _two_sided_t_pvalue(t_stat, n - 1))
 
 
 def two_proportion_z_test(k1: int, n1: int, k2: int, n2: int) -> tuple[float, float]:
