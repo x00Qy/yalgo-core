@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yalgo-core"
+version = "0.1.0"
+description = "Shared engine for YALGO Quant Labs: statistics helpers and transaction-cost models."
+requires-python = ">=3.10"
+dependencies = ["scipy"]
+
+[tool.setuptools]
+packages = ["yalgo_core"]
+
+[tool.setuptools.package-data]
+yalgo_core = ["py.typed"]
