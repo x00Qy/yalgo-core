@@ -31,6 +31,19 @@ the same set with exact pins and exists so the pinned versions are visible and s
 pip install -r requirements.txt   # numpy==2.4.6, scipy==1.18.0
 ```
 
+**The pins are what the dependent repositories' committed results were produced with. They are not
+the only versions that work, and that was tested rather than assumed.** A clean virtualenv
+resolving **numpy 2.5.3 and scipy 1.18.1** — both newer than the pins — reproduced every committed
+result in P1 and forced-flows byte-identically apart from the run timestamp (verified 2026-09-22).
+So the pins are known-good rather than load-bearing, and a resolver that picks something newer is
+not on its own a reason to distrust a figure.
+
+| package | pinned | also verified |
+|---|---|---|
+| numpy | 2.4.6 | 2.5.3 |
+| scipy | 1.18.0 | 1.18.1 |
+| pandas *(consumers only)* | 3.0.5 | 3.0.6 |
+
 **If `D:/YALGO/yalgo-core` is not where this repo lives, install from wherever it does.** Nothing
 depends on that literal path except the error messages in the two consumer repos, which name it
 because it is where it sits on the machine this was developed on.
