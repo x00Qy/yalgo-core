@@ -1,7 +1,7 @@
 # yalgo-core
 
 **The shared statistics and transaction-cost package behind the published
-[`forced-flows`](../forced-flows) research.** It exists so that two repositories compute a
+[`forced-flows`](https://github.com/x00Qy/forced-flows-public) research.** It exists so that two repositories compute a
 p-value and a cost floor with the *same* code rather than two drifting copies of it.
 
 **It is installed, not run.** No scripts, no data files, no network calls. Everything it exports
