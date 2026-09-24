@@ -4,6 +4,10 @@
 [`forced-flows`](https://github.com/x00Qy/forced-flows-public) research.** It exists so that two repositories compute a
 p-value and a cost floor with the *same* code rather than two drifting copies of it.
 
+**What that research found:** four pre-registered ideas about forced institutional flows in Indian
+equities, all four closed, **none producing a tradable edge.** This package holds the arithmetic
+that closed them.
+
 **It is installed, not run.** No scripts, no data files, no network calls. Everything it exports
 is either pure arithmetic or a rate table written into the source with its provenance.
 
@@ -13,17 +17,34 @@ pip install -e .
 
 ## What is in it
 
+**Two modules:**
+
 | module | what it is |
 |---|---|
-| `yalgo_core.stats_utils` | Welch t-test, one-sample t-test, two-proportion z-test, Wilson interval, exact binomial p-value, binomial log-pmf. All return `(statistic, p_value)` tuples. |
+| `yalgo_core.stats_utils` | The three **tests** — `welch_t_test`, `one_sample_t_test`, `two_proportion_z_test` — each return `(statistic, p_value)`. The other three do not: `wilson_ci` returns `(lower, upper)`, and `two_sided_exact_pvalue` and `log_pmf` return a bare `float`. |
 | `yalgo_core.equity_cost_model` | Round-trip cost for cash-segment **delivery equity**, in basis points of notional and in rupees, date-keyed across statutory rate eras, plus the fixed-rupee CDSL/DP charge. |
-| `yalgo_core.py.typed` | PEP 561 marker — the package ships type information. |
 
-`stats_utils` carries its own git history from the research repository it was extracted from,
-including the commit that fixed a real bug in it: t-statistics were being converted to p-values
-through the standard normal CDF rather than the Student-t CDF, which overstated significance on
-small samples. That history is the reason the extraction preserved commits rather than starting
-clean.
+There is also `yalgo_core/py.typed` — **a marker file, not a module.** It is empty, and its
+presence is what tells a type checker that this package ships type information (PEP 561).
+
+## The bug that is the reason this package has a git history
+
+`stats_utils` was extracted with its commits rather than copied clean, and the reason is one of
+them.
+
+**t-statistics were being converted to p-values through the standard normal CDF instead of the
+Student-t CDF.** The two agree in the limit and diverge exactly where it matters — small samples.
+Every p-value the project had computed was therefore **too small**, and every result looked more
+significant than it was. The error flattered results, which is the direction that does damage.
+
+It was found by audit, not by a failing test, and it is fixed in
+`afb2303 — "Fix two core-engine bugs found by audit: lot-size table and t-test p-values"`. The
+function that does it now, `_two_sided_t_pvalue(t_stat, df)`, takes an explicit `df` and uses
+`scipy.stats.t`.
+
+**This is the clearest evidence in the package that its statistics were checked rather than
+assumed**, and it is why the history was preserved: a package whose p-values were once wrong
+should be able to show when they stopped being wrong.
 
 ## Two things about the cost model, stated up front
 
