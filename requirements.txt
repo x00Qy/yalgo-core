@@ -7,7 +7,7 @@
 # This package is normally not installed from this file. It is installed
 # EDITABLE by its consumers:
 #
-#     pip install -e D:/YALGO/yalgo-core
+#     pip install -e ../yalgo-core
 #
 # which resolves these same dependencies from pyproject.toml. The file exists
 # so the pinned set is visible and so `pip install -r` works standalone.
@@ -18,8 +18,8 @@ scipy==1.18.0
 # Development only -- not needed to import or use the package.
 # `scipy-stubs` is REQUIRED for a clean `mypy --strict yalgo_core`; without it
 # mypy reports one import-untyped error for scipy. The alternative -- a
-# `# type: ignore` on the scipy import -- is not taken, because P1's
-# stats_utils shim states this file is byte-identical to the version it
-# replaced and editing it would falsify that. See SETUP.md.
+# `# type: ignore` on the scipy import -- is not taken, because the repository
+# this file was moved from has a committed claim that it is byte-identical to
+# the version it replaced, and editing it would falsify that. See SETUP.md.
 # mypy==2.2.0
 # scipy-stubs==1.18.1.1

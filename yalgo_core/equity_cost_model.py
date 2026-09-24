@@ -15,16 +15,19 @@ a Zerodha account and has to say so.
 
 WHY THAT SCOPE IS SAFE HERE. The forced-flows event study computes GROSS
 abnormal returns. Cost enters only as the viability bar, and that bar is
-TODAY'S cost -- regime (a) in PAPER_no_alpha_at_retail_cost_v2.md. Nothing in
-forced-flows prices a historical trade, so a table that refuses to answer for
-pre-2025 dates costs nothing and stops a guessed rate entering a figure.
+TODAY'S cost. Nothing in forced-flows prices a historical trade, so a table
+that refuses to answer for pre-2025 dates costs nothing and stops a guessed
+rate entering a figure.
 
 THE RAISE IS THE POINT, not a limitation to be worked around. `rate_on()`
 raises for any date before the earliest sourced era, exactly as
-`spot_cost_model.stt_rate_on()` does in P1 -- that function's own docstring
-contrasts it with `lot_size.py`, which opens its table at 1900-01-01 and
-silently returns an UNVERIFIED tier, and calls that a live trap. This module
-does not reproduce the trap.
+`spot_cost_model.stt_rate_on()` does in the options-research repository this package was extracted from -- that function's own docstring contrasts it with `lot_size.py`, which
+opens its table at 1900-01-01 and silently returns an UNVERIFIED tier, and
+calls that a live trap. This module does not reproduce the trap.
+
+That repository is referred to below as "the options-research repository". It
+is not public; the references are there because they are the reasons these
+design choices were made, not because anything here depends on it.
 
 EVERY RATE CARRIES A SOURCE AND A FETCH DATE, and at present NONE carries
 `verified=True` -- none has been confirmed against a primary regulatory
@@ -35,7 +38,7 @@ against the statutory instrument, flip that one era and say which document.
 
 All statutory charges here are percentages of turnover, so they are constant in
 BASIS POINTS OF NOTIONAL whatever the scrip trades at -- the same property that
-makes P1's futures floor index-independent.
+makes the options-research repository's futures floor index-independent.
 
 DP CHARGES ARE NOT. They are a FIXED RUPEE amount per scrip per sell,
 independent of quantity and of notional, so their bps contribution falls as
@@ -78,13 +81,16 @@ __all__ = [
 # None of the rates below has been confirmed against the Finance Act, the
 # relevant SEBI or exchange circular, or the Indian Stamp Act, so every era
 # here carries verified=False. That is the same two-tier convention
-# diag_cost_floor_table.py states in P1: PRIMARY means fetched from a primary
+# diag_cost_floor_table.py states in the options-research repository: PRIMARY
+# means fetched from a primary
 # source, SECONDARY means taken from a summary and not yet confirmed.
 #
-# NOTE A DIVERGENCE, recorded rather than quietly resolved: P1's
-# spot_cost_model.py marks its 2026 futures STT era verified=True citing this
+# NOTE A DIVERGENCE, recorded rather than quietly resolved: the
+# options-research repository's spot_cost_model.py marks its 2026 futures STT
+# era verified=True citing this
 # same domain. One of the two is mislabelled. This module takes the
-# conservative reading for its own rates and does not reach into P1 to change
+# conservative reading for its own rates and does not reach into that
+# repository to change
 # that one.
 SOURCE: Final[str] = ("broker-published schedule (Zerodha), secondary source, "
                       "equity delivery (NSE) column")
@@ -103,7 +109,8 @@ class RateEra:
     Deliberately the same shape as `spot_cost_model.RateEra` so that a future
     task which sources the rate history can add eras here without reshaping
     any caller. It is NOT imported from there: that module is futures-side and
-    carries P1-internal dependencies (lot_size, spot_backtest_loop)."""
+    carries dependencies internal to that repository (lot_size,
+    spot_backtest_loop)."""
     effective: date
     rate: float
     provenance: str
@@ -142,7 +149,8 @@ STAMP_DELIVERY_BUY: Final[tuple[RateEra, ...]] = (
 # "Charges for Investor's Protection Fund Trust (IPFT) by NSE -- Equity and
 # Futures - ₹0.01 per crore + GST" -- SOURCE, FETCHED. Three orders of
 # magnitude below the SEBI fee; included because omitting a known term is how
-# a floor gets understated, which is the defect P1's cost model was built to
+# a floor gets understated, which is the defect the options-research
+# repository's cost model was built to
 # stop.
 IPFT_NSE: Final[tuple[RateEra, ...]] = (
     RateEra(EARLIEST_SOURCED, 0.000000001, CITATION, verified=False),
@@ -236,7 +244,8 @@ def round_trip_cost_rupees(notional_rupees: float, on_date: date,
     `notional_rupees` is STATED BY THE CALLER and has no default: there is no
     sensible default position size, and a defaulted notional is how a
     fixed-rupee term silently becomes negligible. Buy and sell notional are
-    taken as equal, which is the convention P1 uses for its futures round trip.
+    taken as equal, which is the convention the options-research repository
+    uses for its futures round trip.
 
     `scrips_sold` multiplies the DP charge only; it is 1 for a single-name
     event study and is exposed so a basket does not understate it."""
